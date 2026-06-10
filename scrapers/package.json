@@ -1,0 +1,19 @@
+{
+  "name": "dataraiz-scrapers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Worker de scraping de DataRaíz (Playwright)",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
