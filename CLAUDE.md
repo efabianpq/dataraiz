@@ -54,6 +54,13 @@ en una sola máquina local (WSL2).
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
 
+### Resumen de cierre Fase 0
+- 6 contenedores Docker corriendo
+- 5/5 tests de Fase 0 en verde
+- Backend NestJS en :3001, Analytics FastAPI en :8000, Frontend Next.js en :3000
+- PostgreSQL + PostGIS inicializado con schema de 9 tablas
+- Próxima fase: Fase 1 — Ingesta de datos
+
 ### Stack
 - Los 6 servicios levantan correctamente con `docker compose up -d --build`.
 - backend (NestJS): `GET /health` → `{"status":"ok"}` en :3001
