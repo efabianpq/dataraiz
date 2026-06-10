@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
 > Última actualización: 2026-06-09
-> Fase actual: Fase 1 — Ingesta de Datos
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 2
+> Fase actual: Fase 2 — Geoprocesamiento
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 3
 
 ---
 
@@ -42,7 +42,7 @@ en una sola máquina local (WSL2).
 |------|--------------------------|--------------------------|
 | 0    | Entorno y esqueletos     | ✅ Completada (2026-06-09) |
 | 1    | Ingesta de datos         | ✅ Completada (2026-06-09) |
-| 2    | Geoprocesamiento         | Pendiente    |
+| 2    | Geoprocesamiento         | ✅ Completada (2026-06-09) |
 | 3    | Modelos de valor         | Pendiente    |
 | 4    | Segmentación y comps     | Pendiente    |
 | 5    | Oportunidad y finanzas   | Pendiente    |
@@ -54,9 +54,23 @@ en una sola máquina local (WSL2).
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
 
+### Resumen de cierre Fase 2
+- Geoprocesamiento completo: `analisis_inmueble` poblado con 302 filas y las
+  5 variables de contexto espacial (`dist_pot_m`, `en_zona_riesgo`,
+  `nivel_riesgo`, `dist_centrocentro_m`, `zona_id`)
+- SRID **9377** (MAGNA-SIRGAS 2018 / Origen-Nacional) registrado en
+  `spatial_ref_sys` vía migración 004 (PostGIS 3.4 no lo traía)
+- Pipeline `analytics/app/pipelines/geoprocesamiento.py` (PostGIS-SQL +
+  SQLAlchemy, lotes de 100, idempotente, structlog) y endpoint
+  `POST /analytics/geoprocesar`
+- Criterios OK: avg(dist_pot_m)=2178m (<5000), en_zona_riesgo=2 (>0),
+  dist_pot_m no nulo=302 (100% ≥ 90%)
+- Detalle completo en `docs/fases/fase_02_completada.md`
+- Próxima fase: Fase 3 — Modelos de valor
+
 ### Resumen de cierre Fase 1
 - 6 contenedores Docker corriendo (analytics y scrapers reconstruidos en
-  esta fase)
+  esa fase)
 - Scraper Fincaraíz (Playwright + BullMQ) operativo: 315 inmuebles cargados,
   302 con geometría (95.9%), 0 geometrías inválidas
 - `POST /scraping/run` y `GET /scraping/status/:jobId` en el backend; job
@@ -64,7 +78,6 @@ en una sola máquina local (WSL2).
 - Capas POT y riesgo del AMB (FeatureServer Floridablanca) cargadas en
   `proyecto_pot` (6825 registros) y `capa_riesgo` (2868 registros)
 - Detalle completo en `docs/fases/fase_01_completada.md`
-- Próxima fase: Fase 2 — Geoprocesamiento
 
 ### Stack
 - Los 6 servicios levantan correctamente con `docker compose up -d --build`.
@@ -86,7 +99,8 @@ en una sola máquina local (WSL2).
   via_proyectada=93; cobertura principal Floridablanca)
 - capa_riesgo: 2868 polígonos (categoria=movimiento_masa; bajo=612,
   medio=1187, alto=1069; cobertura principal Floridablanca)
-- analisis_inmueble: 0 registros
+- analisis_inmueble: 302 registros con variables espaciales (Fase 2);
+  columnas de valor/score (Fase 3) aún vacías
 
 ### Modelos activos
 - Ninguno todavía (a partir de Fase 3)
@@ -95,8 +109,19 @@ en una sola máquina local (WSL2).
 - shadcn/ui no está configurado todavía (diferido a Fase 7B).
 - `proyecto_pot`/`capa_riesgo` cubren principalmente Floridablanca; falta
   cobertura de Bucaramanga, Girón y Piedecuesta (ver deuda técnica de
-  `docs/fases/fase_01_completada.md`).
+  `docs/fases/fase_01_completada.md`). Impacto en Fase 2: solo 2 inmuebles
+  marcan `en_zona_riesgo`, y `dist_pot_m` crece para inmuebles lejos de
+  Floridablanca.
+- 15 de 302 inmuebles quedan sin `zona_id` por caer fuera de las bounding
+  boxes provisionales de `zona` (datos semilla de Fase 0).
 - `datos_oficiales/catastro/` sigue vacío (sin fuente IGAC verificada).
+
+### Nota PostGIS / SRID
+- El SRID **9377** (MAGNA-SIRGAS 2018 / Origen-Nacional) NO viene en la imagen
+  `postgis/postgis:16-3.4`; se registra en `spatial_ref_sys` vía la migración
+  `004_geoprocesamiento.sql`. Es obligatorio para `ST_Transform(geom, 9377)`
+  (distancias en metros). En un entorno nuevo, las migraciones 001-004 se
+  aplican automáticamente al inicializar la DB.
 
 ---
 
@@ -130,7 +155,7 @@ en una sola máquina local (WSL2).
 | zona              | Unidad territorial (barrio/sector)       | id, nombre, geom (polígono), precio_m2_mediano                     |
 | proyecto_pot      | Proyectos de infraestructura y POT       | id, tipo, estado, geom                                             |
 | capa_riesgo       | Polígonos de amenaza/riesgo              | id, categoria, nivel, geom                                         |
-| analisis_inmueble | Resultados precalculados por inmueble    | inmueble_id, valor_estimado, brecha, score, shap_json              |
+| analisis_inmueble | Resultados precalculados por inmueble    | inmueble_id, dist_pot_m, en_zona_riesgo, nivel_riesgo, dist_centrocentro_m, zona_id (Fase 2); valor_estimado, brecha, score, shap_json (Fase 3) |
 | comparable        | Relación inmueble con sus comps          | inmueble_id, comparable_id, distancia, dif_precio_m2               |
 | usuario           | Inversionista registrado                 | id, nombre, email, preferencias                                    |
 | watchlist         | Criterios guardados del usuario          | id, usuario_id, filtros_json, activa                               |
