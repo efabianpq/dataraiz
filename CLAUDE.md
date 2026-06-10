@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
 > Última actualización: 2026-06-09
-> Fase actual: Fase 3 — Modelos de valor de mercado
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 4
+> Fase actual: Fase 4 — Segmentación y comparables
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 5
 
 ---
 
@@ -44,7 +44,7 @@ en una sola máquina local (WSL2).
 | 1    | Ingesta de datos         | ✅ Completada (2026-06-09) |
 | 2    | Geoprocesamiento         | ✅ Completada (2026-06-09) |
 | 3    | Modelos de valor         | ✅ Completada (2026-06-09) |
-| 4    | Segmentación y comps     | Pendiente    |
+| 4    | Segmentación y comps     | ✅ Completada (2026-06-09) |
 | 5    | Oportunidad y finanzas   | Pendiente    |
 | 6    | Score y optimización     | Pendiente    |
 | 7    | Aplicación (UI + API)    | Pendiente    |
@@ -53,6 +53,27 @@ en una sola máquina local (WSL2).
 ---
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
+
+### Resumen de cierre Fase 4 (2026-06-09)
+- **Segmentación: StandardScaler → PCA(5, 84.1% varianza) → K-means k=4**,
+  silueta=0.4316 (>0.30). k elegido por mayor silueta con desempate parsimonioso
+  (`TOL_SILUETA=0.5%`): k=6 empata con k=4 por ruido (0.0006), se prefiere k=4.
+- Conteo por segmento `{0:199, 1:99, 2:3, 3:1}`; segmentos 2/3 agrupan atípicos
+  (rasgo de los datos, presente para cualquier k).
+- **302/302 inmuebles con `segmento` y `posicion_vs_mediana`** en
+  `analisis_inmueble` (138 `debajo` = oportunidades, 164 `encima`).
+- **Tabla `comparable` poblada: 1510 filas** (5 comparables por inmueble) con
+  `distancia_pca`, `dif_precio_m2`, `posicion_vs_mediana`. Selección en cascada:
+  mismo tipo + zona ±1 → mismo segmento → todo el tipo.
+- Artefactos en el volumen `analytics_models`: `scaler_segmentacion.joblib`,
+  `pca_model.joblib`, `kmeans_model.joblib`, `segmentacion.json`.
+- Endpoints `POST /analytics/segmentar` y `GET /analytics/segmentos`.
+- Migración 006: `segmento`/`posicion_vs_mediana` en `analisis_inmueble`;
+  `distancia_pca`/`posicion_vs_mediana` en `comparable`.
+- Pipeline `analytics/app/pipelines/segmentacion.py`; tests en
+  `tests/test_segmentacion.py` (7). Suite analytics: 15 passed.
+- Detalle completo en `docs/fases/fase_04_completada.md`
+- Próxima fase: Fase 5 — Oportunidad y finanzas
 
 ### Resumen de cierre Fase 3 (2026-06-09)
 - **Modelo de valor activo: XGBoost**, R²=0.632, RMSE≈763M COP, MAE≈391M COP
@@ -116,11 +137,17 @@ en una sola máquina local (WSL2).
 - capa_riesgo: 2868 polígonos (categoria=movimiento_masa; bajo=612,
   medio=1187, alto=1069; cobertura principal Floridablanca)
 - analisis_inmueble: 302 registros con variables espaciales (Fase 2) +
-  `valor_estimado` y `brecha` (Fase 3); `score`/`shap_json` (Fase 6) vacíos
+  `valor_estimado` y `brecha` (Fase 3) + `segmento` y `posicion_vs_mediana`
+  (Fase 4); `score`/`shap_json` (Fase 6) vacíos
+- comparable: 1510 registros (5 comparables por inmueble) con `distancia_pca`,
+  `dif_precio_m2`, `posicion_vs_mediana` (Fase 4)
 
 ### Modelos activos
 - **Valor de mercado: XGBoost** (R²=0.632) en `analytics_models/best_model.joblib`
   + `preprocessor.joblib`. Re-entrenar con `POST /analytics/entrenar`.
+- **Segmentación: PCA(5) + K-means k=4** (silueta=0.4316) en
+  `analytics_models/{scaler_segmentacion,pca_model,kmeans_model}.joblib`.
+  Recalcular segmentos y comparables con `POST /analytics/segmentar`.
 
 ### Problemas conocidos
 - shadcn/ui no está configurado todavía (diferido a Fase 7B).

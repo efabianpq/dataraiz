@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.logging_config import configure_logging
-from app.pipelines import modelos_valor
+from app.pipelines import modelos_valor, segmentacion
 from app.pipelines.geoprocesamiento import run_geoprocesamiento
 
 configure_logging()
@@ -81,4 +81,41 @@ def metricas() -> MetricasResponse:
         mae=datos["mae"],
         r2=datos["r2"],
         n_train=datos["n_train"],
+    )
+
+
+# ============================================================
+# Fase 4 — Segmentación y comparables
+# ============================================================
+class SegmentosResponse(BaseModel):
+    k: int
+    silueta: float
+    n_inmuebles: int
+    conteo_por_segmento: dict[int, int]
+    siluetas_por_k: dict[int, float]
+    comparables_insertados: int
+
+
+@app.post("/analytics/segmentar")
+def segmentar() -> dict[str, Any]:
+    """Recalcula segmentos (PCA + K-means) y comparables completos."""
+    return segmentacion.segmentar()
+
+
+@app.get("/analytics/segmentos", response_model=SegmentosResponse)
+def segmentos() -> SegmentosResponse:
+    """Devuelve el resumen de la última segmentación: k, silueta y conteos."""
+    datos = segmentacion.cargar_resumen()
+    if datos is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No hay segmentación todavía. Ejecute POST /analytics/segmentar.",
+        )
+    return SegmentosResponse(
+        k=datos["k"],
+        silueta=datos["silueta"],
+        n_inmuebles=datos["n_inmuebles"],
+        conteo_por_segmento=datos["conteo_por_segmento"],
+        siluetas_por_k=datos["siluetas_por_k"],
+        comparables_insertados=datos["comparables_insertados"],
     )
