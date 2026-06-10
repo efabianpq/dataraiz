@@ -41,6 +41,7 @@ services:
     volumes:
       - ./analytics:/app
       - analytics_models:/app/app/models
+      - ./datos_oficiales:/app/datos_oficiales
 
   backend:
     build: ./backend
@@ -51,6 +52,7 @@ services:
       ANALYTICS_URL: ${ANALYTICS_URL}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      SCRAPING_INTERVAL_HOURS: ${SCRAPING_INTERVAL_HOURS}
     ports:
       - "3001:3001"
     depends_on:
@@ -69,6 +71,7 @@ services:
       REDIS_URL: ${REDIS_URL}
       SCRAPING_INTERVAL_HOURS: ${SCRAPING_INTERVAL_HOURS}
       SCRAPING_RATE_LIMIT_MS: ${SCRAPING_RATE_LIMIT_MS}
+      SCRAPING_MAX_PAGES: ${SCRAPING_MAX_PAGES}
       PILOT_CITIES: ${PILOT_CITIES}
     depends_on:
       db:

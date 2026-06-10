@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
 > Última actualización: 2026-06-09
-> Fase actual: Fase 0 — Entorno y Esqueletos
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 1
+> Fase actual: Fase 1 — Ingesta de Datos
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 2
 
 ---
 
@@ -41,7 +41,7 @@ en una sola máquina local (WSL2).
 | Fase | Nombre                   | Estado                  |
 |------|--------------------------|--------------------------|
 | 0    | Entorno y esqueletos     | ✅ Completada (2026-06-09) |
-| 1    | Ingesta de datos         | Pendiente    |
+| 1    | Ingesta de datos         | ✅ Completada (2026-06-09) |
 | 2    | Geoprocesamiento         | Pendiente    |
 | 3    | Modelos de valor         | Pendiente    |
 | 4    | Segmentación y comps     | Pendiente    |
@@ -54,29 +54,38 @@ en una sola máquina local (WSL2).
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
 
-### Resumen de cierre Fase 0
-- 6 contenedores Docker corriendo
-- 5/5 tests de Fase 0 en verde
-- Backend NestJS en :3001, Analytics FastAPI en :8000, Frontend Next.js en :3000
-- PostgreSQL + PostGIS inicializado con schema de 9 tablas
-- Próxima fase: Fase 1 — Ingesta de datos
+### Resumen de cierre Fase 1
+- 6 contenedores Docker corriendo (analytics y scrapers reconstruidos en
+  esta fase)
+- Scraper Fincaraíz (Playwright + BullMQ) operativo: 315 inmuebles cargados,
+  302 con geometría (95.9%), 0 geometrías inválidas
+- `POST /scraping/run` y `GET /scraping/status/:jobId` en el backend; job
+  programado por `@Cron` cada `SCRAPING_INTERVAL_HOURS` horas
+- Capas POT y riesgo del AMB (FeatureServer Floridablanca) cargadas en
+  `proyecto_pot` (6825 registros) y `capa_riesgo` (2868 registros)
+- Detalle completo en `docs/fases/fase_01_completada.md`
+- Próxima fase: Fase 2 — Geoprocesamiento
 
 ### Stack
 - Los 6 servicios levantan correctamente con `docker compose up -d --build`.
 - backend (NestJS): `GET /health` → `{"status":"ok"}` en :3001
-- analytics (FastAPI/Python 3.11): `GET /health` → `{"status":"ok"}` en :8000
+- analytics (FastAPI/Python 3.11): `GET /health` → `{"status":"ok"}` en :8000;
+  ahora incluye `requests` y monta `./datos_oficiales` para los scripts de
+  carga
 - frontend (Next.js 16 + Turbopack): página "DataRaíz - En construcción" en :3000
 - db (PostgreSQL 16 + PostGIS 3.4): 9 tablas del modelo de datos creadas vía
   migraciones 001-003, healthcheck OK
 - redis (7-alpine): operativo, healthcheck OK
-- scrapers: worker placeholder corriendo (heartbeat cada 60s); sin scrapers
-  reales todavía (Fase 1A)
+- scrapers: imagen `mcr.microsoft.com/playwright:v1.60.0-noble`, worker BullMQ
+  (`startWorker`) escuchando la cola `scraping`, ejecuta `scrapeFincaraiz`
 
 ### Datos disponibles
-- inmueble: 0 registros
+- inmueble: 315 registros (fuente: fincaraiz; apto=105, casa=103, lote=84, local=23)
 - zona: 4 registros (bounding boxes provisionales de los 4 municipios piloto)
-- proyecto_pot: 0 registros
-- capa_riesgo: 0 polígonos
+- proyecto_pot: 6825 registros (tratamiento_urbanistico=3280, uso_suelo=3452,
+  via_proyectada=93; cobertura principal Floridablanca)
+- capa_riesgo: 2868 polígonos (categoria=movimiento_masa; bajo=612,
+  medio=1187, alto=1069; cobertura principal Floridablanca)
 - analisis_inmueble: 0 registros
 
 ### Modelos activos
@@ -84,6 +93,10 @@ en una sola máquina local (WSL2).
 
 ### Problemas conocidos
 - shadcn/ui no está configurado todavía (diferido a Fase 7B).
+- `proyecto_pot`/`capa_riesgo` cubren principalmente Floridablanca; falta
+  cobertura de Bucaramanga, Girón y Piedecuesta (ver deuda técnica de
+  `docs/fases/fase_01_completada.md`).
+- `datos_oficiales/catastro/` sigue vacío (sin fuente IGAC verificada).
 
 ---
 

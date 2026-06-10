@@ -1,11 +1,18 @@
+import { startWorker, SCRAPING_QUEUE_NAME } from './queue';
+
 const PILOT_CITIES = process.env.PILOT_CITIES ?? 'bucaramanga,floridablanca,giron,piedecuesta';
-const INTERVAL_HOURS = Number(process.env.SCRAPING_INTERVAL_HOURS ?? 6);
 
 console.log('DataRaíz scraper worker iniciado.');
 console.log(`Ciudades piloto: ${PILOT_CITIES}`);
-console.log(`Intervalo de scraping configurado: cada ${INTERVAL_HOURS}h`);
-console.log('Aún no hay scrapers programados (pendiente: Fase 1A).');
+console.log(`Escuchando cola BullMQ: "${SCRAPING_QUEUE_NAME}"`);
 
-setInterval(() => {
-  console.log(`[${new Date().toISOString()}] Worker activo, en espera de tareas.`);
-}, 60_000);
+const worker = startWorker();
+
+async function shutdown(signal: string) {
+  console.log(`${signal} recibido, cerrando worker...`);
+  await worker.close();
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
