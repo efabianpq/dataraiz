@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
 > Última actualización: 2026-06-09
-> Fase actual: Fase 2 — Geoprocesamiento
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 3
+> Fase actual: Fase 3 — Modelos de valor de mercado
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 4
 
 ---
 
@@ -43,7 +43,7 @@ en una sola máquina local (WSL2).
 | 0    | Entorno y esqueletos     | ✅ Completada (2026-06-09) |
 | 1    | Ingesta de datos         | ✅ Completada (2026-06-09) |
 | 2    | Geoprocesamiento         | ✅ Completada (2026-06-09) |
-| 3    | Modelos de valor         | Pendiente    |
+| 3    | Modelos de valor         | ✅ Completada (2026-06-09) |
 | 4    | Segmentación y comps     | Pendiente    |
 | 5    | Oportunidad y finanzas   | Pendiente    |
 | 6    | Score y optimización     | Pendiente    |
@@ -54,19 +54,35 @@ en una sola máquina local (WSL2).
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
 
-### Resumen de cierre Fase 2
-- Geoprocesamiento completo: `analisis_inmueble` poblado con 302 filas y las
-  5 variables de contexto espacial (`dist_pot_m`, `en_zona_riesgo`,
-  `nivel_riesgo`, `dist_centrocentro_m`, `zona_id`)
-- SRID **9377** (MAGNA-SIRGAS 2018 / Origen-Nacional) registrado en
-  `spatial_ref_sys` vía migración 004 (PostGIS 3.4 no lo traía)
+### Resumen de cierre Fase 3 (2026-06-09)
+- **Modelo de valor activo: XGBoost**, R²=0.632, RMSE≈763M COP, MAE≈391M COP
+  (n_train=229, n_test=58). Mejor de 4 modelos por RMSE.
+- 302/302 inmuebles con features completos tienen `valor_estimado` y `brecha`
+  en `analisis_inmueble` (17 muy subvalorados, 28 sobrevalorados)
+- Target `precio` modelado en **espacio logarítmico** (`log1p`/`expm1`);
+  `precio_m2` se usa solo para filtrar outliers, NO como feature (anti-leakage)
+- Endpoints `POST /analytics/entrenar` y `GET /analytics/metricas`
+- Modelos serializados en el volumen `analytics_models`: `best_model.joblib`,
+  `preprocessor.joblib`, `metricas.json`
+- Migración 005: `brecha` ampliada a NUMERIC(12,2); Dockerfile analytics con
+  `libgomp1` (XGBoost)
+- Detalle completo en `docs/fases/fase_03_completada.md`
+- Próxima fase: Fase 4 — Segmentación y comparables
+
+### Resumen de cierre Fase 2 (2026-06-09)
+- **302/302 inmuebles con variables espaciales calculadas** y guardadas en
+  `analisis_inmueble` (`dist_pot_m`, `en_zona_riesgo`, `nivel_riesgo`,
+  `dist_centrocentro_m`, `zona_id`)
+- **dist_pot_m promedio: 2178 m** (< 5000 m, criterio cumplido)
+- **2 inmuebles en zona de riesgo `movimiento_masa`** (`en_zona_riesgo = true`)
+- **SRID 9377 registrado manualmente en PostGIS** (MAGNA-SIRGAS 2018 /
+  Origen-Nacional) vía migración `004_geoprocesamiento.sql`; la imagen
+  `postgis/postgis:16-3.4` no lo trae
 - Pipeline `analytics/app/pipelines/geoprocesamiento.py` (PostGIS-SQL +
   SQLAlchemy, lotes de 100, idempotente, structlog) y endpoint
   `POST /analytics/geoprocesar`
-- Criterios OK: avg(dist_pot_m)=2178m (<5000), en_zona_riesgo=2 (>0),
-  dist_pot_m no nulo=302 (100% ≥ 90%)
 - Detalle completo en `docs/fases/fase_02_completada.md`
-- Próxima fase: Fase 3 — Modelos de valor
+- **Próxima fase: Fase 3 — Modelos de valor de mercado**
 
 ### Resumen de cierre Fase 1
 - 6 contenedores Docker corriendo (analytics y scrapers reconstruidos en
@@ -83,8 +99,8 @@ en una sola máquina local (WSL2).
 - Los 6 servicios levantan correctamente con `docker compose up -d --build`.
 - backend (NestJS): `GET /health` → `{"status":"ok"}` en :3001
 - analytics (FastAPI/Python 3.11): `GET /health` → `{"status":"ok"}` en :8000;
-  ahora incluye `requests` y monta `./datos_oficiales` para los scripts de
-  carga
+  incluye `requests`, scikit-learn, XGBoost, pandas, numpy, joblib (+ `libgomp1`);
+  monta `./datos_oficiales` y el volumen `analytics_models` (modelos entrenados)
 - frontend (Next.js 16 + Turbopack): página "DataRaíz - En construcción" en :3000
 - db (PostgreSQL 16 + PostGIS 3.4): 9 tablas del modelo de datos creadas vía
   migraciones 001-003, healthcheck OK
@@ -99,11 +115,12 @@ en una sola máquina local (WSL2).
   via_proyectada=93; cobertura principal Floridablanca)
 - capa_riesgo: 2868 polígonos (categoria=movimiento_masa; bajo=612,
   medio=1187, alto=1069; cobertura principal Floridablanca)
-- analisis_inmueble: 302 registros con variables espaciales (Fase 2);
-  columnas de valor/score (Fase 3) aún vacías
+- analisis_inmueble: 302 registros con variables espaciales (Fase 2) +
+  `valor_estimado` y `brecha` (Fase 3); `score`/`shap_json` (Fase 6) vacíos
 
 ### Modelos activos
-- Ninguno todavía (a partir de Fase 3)
+- **Valor de mercado: XGBoost** (R²=0.632) en `analytics_models/best_model.joblib`
+  + `preprocessor.joblib`. Re-entrenar con `POST /analytics/entrenar`.
 
 ### Problemas conocidos
 - shadcn/ui no está configurado todavía (diferido a Fase 7B).

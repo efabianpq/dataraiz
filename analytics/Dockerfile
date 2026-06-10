@@ -6,6 +6,11 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
+# libgomp1: runtime de OpenMP requerido por XGBoost.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN python3.11 -m pip install --upgrade pip \
     && python3.11 -m pip install -r requirements.txt
