@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.logging_config import configure_logging
-from app.pipelines import modelos_valor, segmentacion
+from app.pipelines import modelos_valor, oportunidad_finanzas, segmentacion
 from app.pipelines.geoprocesamiento import run_geoprocesamiento
 
 configure_logging()
@@ -119,3 +119,18 @@ def segmentos() -> SegmentosResponse:
         siluetas_por_k=datos["siluetas_por_k"],
         comparables_insertados=datos["comparables_insertados"],
     )
+
+
+# ============================================================
+# Fase 5 — Oportunidad y finanzas
+# ============================================================
+@app.post("/analytics/clasificar")
+def clasificar() -> dict[str, Any]:
+    """Reentrena el clasificador de oportunidad y recalcula prob_oportunidad."""
+    return oportunidad_finanzas.clasificar()
+
+
+@app.post("/analytics/financiero")
+def financiero() -> dict[str, Any]:
+    """Recalcula canon_estimado_mensual, yield_bruto y cap_rate por inmueble."""
+    return oportunidad_finanzas.calcular_financiero()

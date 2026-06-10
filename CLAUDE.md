@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
 > Última actualización: 2026-06-09
-> Fase actual: Fase 4 — Segmentación y comparables
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 5
+> Fase actual: Fase 5 — Oportunidad y finanzas
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 6
 
 ---
 
@@ -45,7 +45,7 @@ en una sola máquina local (WSL2).
 | 2    | Geoprocesamiento         | ✅ Completada (2026-06-09) |
 | 3    | Modelos de valor         | ✅ Completada (2026-06-09) |
 | 4    | Segmentación y comps     | ✅ Completada (2026-06-09) |
-| 5    | Oportunidad y finanzas   | Pendiente    |
+| 5    | Oportunidad y finanzas   | ✅ Completada (2026-06-09) |
 | 6    | Score y optimización     | Pendiente    |
 | 7    | Aplicación (UI + API)    | Pendiente    |
 | 8    | Validación y cierre      | Pendiente    |
@@ -53,6 +53,28 @@ en una sola máquina local (WSL2).
 ---
 
 ## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
+
+### Resumen de cierre Fase 5 (2026-06-09)
+- **Clasificador de oportunidad: StandardScaler → LogisticRegression
+  (class_weight='balanced')**, AUC promedio (cv=5) = **0.9769** (> 0.65).
+  Etiqueta `oportunidad=1` cuando `brecha < -10` y `posicion_vs_mediana =
+  'debajo'` y `nivel_riesgo != 'alto'` → **25/302 (~8.3%)** positivos.
+- **302/302 inmuebles con `prob_oportunidad`**; **21 con
+  `prob_oportunidad > 0.7`** (oportunidades de alta confianza).
+- **Capa financiera:** ratios canon/precio mensuales por segmento (segmento 0
+  = 0.50%, segmento 1 = 0.45%; segmentos 2/3 excluidos por outliers extremos).
+  **298/302 inmuebles con `canon_estimado_mensual`/`yield_bruto`/`cap_rate`**
+  (4 excluidos). `yield_bruto` promedio = **5.801%**, `cap_rate` promedio =
+  **4.931%** (ambos en rango razonable Colombia 4-10%).
+- Artefacto en el volumen `analytics_models`:
+  `clasificador_oportunidad.joblib` (+ `oportunidad.json`, `financiero.json`).
+- Endpoints `POST /analytics/clasificar` y `POST /analytics/financiero`.
+- Migración 007: `prob_oportunidad`, `canon_estimado_mensual`, `yield_bruto`,
+  `cap_rate` en `analisis_inmueble`.
+- Pipeline `analytics/app/pipelines/oportunidad_finanzas.py`; tests en
+  `tests/test_oportunidad_finanzas.py` (8). Suite analytics: 23 passed.
+- Detalle completo en `docs/fases/fase_05_completada.md`
+- Próxima fase: Fase 6 — Score y optimización
 
 ### Resumen de cierre Fase 4 (2026-06-09)
 - **Segmentación: StandardScaler → PCA(5, 84.1% varianza) → K-means k=4**,
@@ -138,7 +160,9 @@ en una sola máquina local (WSL2).
   medio=1187, alto=1069; cobertura principal Floridablanca)
 - analisis_inmueble: 302 registros con variables espaciales (Fase 2) +
   `valor_estimado` y `brecha` (Fase 3) + `segmento` y `posicion_vs_mediana`
-  (Fase 4); `score`/`shap_json` (Fase 6) vacíos
+  (Fase 4) + `prob_oportunidad`, `canon_estimado_mensual`, `yield_bruto`,
+  `cap_rate` (Fase 5; estos 3 últimos NULL para los 4 inmuebles de los
+  segmentos 2-3); `score`/`shap_json` (Fase 6) vacíos
 - comparable: 1510 registros (5 comparables por inmueble) con `distancia_pca`,
   `dif_precio_m2`, `posicion_vs_mediana` (Fase 4)
 
@@ -148,6 +172,11 @@ en una sola máquina local (WSL2).
 - **Segmentación: PCA(5) + K-means k=4** (silueta=0.4316) en
   `analytics_models/{scaler_segmentacion,pca_model,kmeans_model}.joblib`.
   Recalcular segmentos y comparables con `POST /analytics/segmentar`.
+- **Oportunidad: StandardScaler + LogisticRegression** (AUC cv=5 = 0.9769) en
+  `analytics_models/clasificador_oportunidad.joblib`. Recalcular
+  `prob_oportunidad` con `POST /analytics/clasificar`. Indicadores
+  financieros (`canon_estimado_mensual`, `yield_bruto`, `cap_rate`) con
+  `POST /analytics/financiero`.
 
 ### Problemas conocidos
 - shadcn/ui no está configurado todavía (diferido a Fase 7B).
@@ -199,7 +228,7 @@ en una sola máquina local (WSL2).
 | zona              | Unidad territorial (barrio/sector)       | id, nombre, geom (polígono), precio_m2_mediano                     |
 | proyecto_pot      | Proyectos de infraestructura y POT       | id, tipo, estado, geom                                             |
 | capa_riesgo       | Polígonos de amenaza/riesgo              | id, categoria, nivel, geom                                         |
-| analisis_inmueble | Resultados precalculados por inmueble    | inmueble_id, dist_pot_m, en_zona_riesgo, nivel_riesgo, dist_centrocentro_m, zona_id (Fase 2); valor_estimado, brecha, score, shap_json (Fase 3) |
+| analisis_inmueble | Resultados precalculados por inmueble    | inmueble_id, dist_pot_m, en_zona_riesgo, nivel_riesgo, dist_centrocentro_m, zona_id (Fase 2); valor_estimado, brecha (Fase 3); segmento, posicion_vs_mediana (Fase 4); prob_oportunidad, canon_estimado_mensual, yield_bruto, cap_rate (Fase 5); score, shap_json (Fase 6) |
 | comparable        | Relación inmueble con sus comps          | inmueble_id, comparable_id, distancia, dif_precio_m2               |
 | usuario           | Inversionista registrado                 | id, nombre, email, preferencias                                    |
 | watchlist         | Criterios guardados del usuario          | id, usuario_id, filtros_json, activa                               |
