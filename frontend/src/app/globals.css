@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
+/* ============================================================
+   DataRaíz — Sistema de diseño (Brand Guide)
+   Tokens de marca expuestos como utilidades Tailwind v4 vía @theme.
+   ============================================================ */
+@theme {
+  /* --- Marca (verde raíz) --- */
+  --color-brand-50: #e4f4ef;
+  --color-brand-100: #c0e5d9;
+  --color-brand-200: #8dccb5;
+  --color-brand-300: #5db393;
+  --color-brand-400: #3a9673;
+  --color-brand-500: #3a9673;
+  --color-brand-600: #2d7a5f;
+  --color-brand-700: #226049;
+  --color-brand-800: #1b4d3e;
+  --color-brand-900: #0d2b22;
+
+  /* --- Ámbar (acento) --- */
+  --color-amber-50: #fbf3e0;
+  --color-amber-100: #f5e1b8;
+  --color-amber-200: #edca8a;
+  --color-amber-300: #e0ad59;
+  --color-amber-500: #d4943a;
+  --color-amber-600: #b3791c;
+  --color-amber-700: #8f6012;
+
+  /* --- Terracota (alerta) --- */
+  --color-terra-50: #fae2d4;
+  --color-terra-100: #f2bfa0;
+  --color-terra-200: #e89870;
+  --color-terra-300: #d4743e;
+  --color-terra-500: #c45c2a;
+  --color-terra-600: #b34520;
+  --color-terra-700: #8a3415;
+
+  /* --- Data (azul info) --- */
+  --color-data-50: #e0eaf8;
+  --color-data-100: #bad1ee;
+  --color-data-200: #82aedc;
+  --color-data-300: #4a82c4;
+  --color-data-500: #2563a8;
+  --color-data-600: #1e4d8c;
+  --color-data-700: #163a6b;
+
+  /* --- Neutrales cálidos --- */
+  --color-neutral-50: #faf8f5;
+  --color-neutral-100: #f5f2ee;
+  --color-neutral-200: #e2ddd9;
+  --color-neutral-300: #c4bebb;
+  --color-neutral-400: #a09895;
+  --color-neutral-500: #79716e;
+  --color-neutral-600: #5c5552;
+  --color-neutral-700: #403b38;
+  --color-neutral-800: #292422;
+  --color-neutral-900: #1c1917;
+
+  /* --- Tipografía --- */
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
+
+  /* Escala tipográfica */
+  --text-display: 3rem;
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 700;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 1.1;
+  --text-h1--font-weight: 700;
+  --text-h2: 1.75rem;
+  --text-h2--line-height: 1.2;
+  --text-h2--font-weight: 600;
+  --text-h3: 1.375rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--font-weight: 600;
+  --text-h4: 1.125rem;
+  --text-h4--line-height: 1.4;
+  --text-h4--font-weight: 600;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.2;
+  --text-label--font-weight: 600;
+  --text-label--letter-spacing: 0.06em;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.55;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+
+  /* --- Sombras semánticas --- */
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-panel: 0 4px 16px rgba(13, 43, 34, 0.08);
+  --shadow-modal: 0 16px 48px rgba(13, 43, 34, 0.24);
+  --shadow-pin: 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  /* --- Espaciado semántico --- */
+  --spacing-sidebar: 248px;
+  --spacing-header: 60px;
+  --spacing-panel-p: 24px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #faf8f5;
+  --foreground: #1c1917;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* MapLibre: popups con la marca DataRaíz */
+.maplibregl-popup-content {
+  border-radius: 10px;
+  box-shadow: var(--shadow-panel);
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+}
+.maplibregl-popup-close-button {
+  font-size: 16px;
+  padding: 2px 6px;
 }

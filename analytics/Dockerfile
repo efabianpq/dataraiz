@@ -19,4 +19,8 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["python3.11", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# --reload-exclude evita que el watcher reinicie el servidor cuando un pipeline
+# escribe artefactos en app/models (best_model.joblib, *.json), lo que cortaba
+# las peticiones de entrenamiento/scoring en curso.
+CMD ["python3.11", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--reload", "--reload-exclude", "*.joblib", "--reload-exclude", "*.json"]

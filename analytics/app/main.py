@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.logging_config import configure_logging
-from app.pipelines import modelos_valor, oportunidad_finanzas, segmentacion
+from app.pipelines import modelos_valor, oportunidad_finanzas, scoring, segmentacion
 from app.pipelines.geoprocesamiento import run_geoprocesamiento
 
 configure_logging()
@@ -15,7 +15,7 @@ configure_logging()
 app = FastAPI(
     title="DataRaíz Analytics",
     description="Motor analítico de DataRaíz: modelos de valor, scoring y SHAP.",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 
@@ -134,3 +134,52 @@ def clasificar() -> dict[str, Any]:
 def financiero() -> dict[str, Any]:
     """Recalcula canon_estimado_mensual, yield_bruto y cap_rate por inmueble."""
     return oportunidad_finanzas.calcular_financiero()
+
+
+# ============================================================
+# Fase 6 — Score integrado, SHAP y optimización
+# ============================================================
+@app.post("/analytics/calcular_score")
+def calcular_score() -> dict[str, Any]:
+    """Calcula el score (0-100) de los inmuebles con datos completos."""
+    return scoring.calcular_score()
+
+
+@app.post("/analytics/calcular_shap")
+def calcular_shap() -> dict[str, Any]:
+    """Calcula los valores SHAP del modelo de valor para cada inmueble."""
+    return scoring.calcular_shap()
+
+
+@app.get("/analytics/score/{inmueble_id}/explicacion")
+def explicacion(inmueble_id: int) -> dict[str, Any]:
+    """Devuelve score, prob_oportunidad, brecha, yield_bruto y shap_json."""
+    datos = scoring.cargar_explicacion(inmueble_id)
+    if datos is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay análisis para el inmueble {inmueble_id}.",
+        )
+    return datos
+
+
+class OptimizarRequest(BaseModel):
+    """Criterios del inversionista para el frente de Pareto. Todos opcionales:
+    omitirlos equivale a no filtrar por ese criterio."""
+
+    presupuesto_max: float | None = None
+    zona_ids: list[int] | None = None
+    tipos: list[str] | None = None
+    tolerancia_riesgo: str = "alto"
+
+
+@app.post("/analytics/optimizar")
+def optimizar(req: OptimizarRequest | None = None) -> dict[str, Any]:
+    """Frente de Pareto (NSGA-II) sobre los inmuebles que cumplen los criterios."""
+    req = req or OptimizarRequest()
+    return scoring.optimizar(
+        presupuesto_max=req.presupuesto_max,
+        zona_ids=req.zona_ids,
+        tipos=req.tipos,
+        tolerancia_riesgo=req.tolerancia_riesgo,
+    )

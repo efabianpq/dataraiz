@@ -224,14 +224,20 @@ def entrenar() -> dict[str, Any]:
 
     # En las búsquedas, los hiperparámetros del estimador interno se prefijan
     # con "regressor__" porque va envuelto en TransformedTargetRegressor.
+    # Reproducibilidad total: tanto los ESTIMADORES (n_jobs=1; XGBoost además
+    # tree_method="exact") como las BÚSQUEDAS (n_jobs=1) se ejecutan en serie.
+    # Con multihilo el ajuste de XGBoost variaba a nivel de punto flotante y,
+    # sobre el test pequeño (n≈58), oscilaba el R² (~0.48-0.55) e incluso el
+    # modelo seleccionado; serializar elimina esa varianza por orden de ejecución
+    # (el costo extra es de pocos segundos para n_iter=20, cv=5).
     rf_search = RandomizedSearchCV(
-        _ttr(RandomForestRegressor(random_state=RANDOM_STATE, n_jobs=-1)),
+        _ttr(RandomForestRegressor(random_state=RANDOM_STATE, n_jobs=1)),
         {f"regressor__{k}": v for k, v in RF_PARAM_DIST.items()},
         n_iter=N_ITER,
         cv=CV_FOLDS,
         scoring="neg_root_mean_squared_error",
         random_state=RANDOM_STATE,
-        n_jobs=-1,
+        n_jobs=1,
     ).fit(X_train_p, y_train)
     modelos["RandomForest"] = rf_search.best_estimator_
 
@@ -239,7 +245,8 @@ def entrenar() -> dict[str, Any]:
         _ttr(
             XGBRegressor(
                 random_state=RANDOM_STATE,
-                n_jobs=-1,
+                n_jobs=1,
+                tree_method="exact",
                 objective="reg:squarederror",
             )
         ),
@@ -248,7 +255,7 @@ def entrenar() -> dict[str, Any]:
         cv=CV_FOLDS,
         scoring="neg_root_mean_squared_error",
         random_state=RANDOM_STATE,
-        n_jobs=-1,
+        n_jobs=1,
     ).fit(X_train_p, y_train)
     modelos["XGBoost"] = xgb_search.best_estimator_
 

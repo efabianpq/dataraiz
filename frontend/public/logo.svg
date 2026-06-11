@@ -1,0 +1,6 @@
+<svg width="34" height="46" viewBox="0 0 34 46" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DataRaíz">
+  <rect x="1" y="8" width="9" height="24" rx="2" fill="#5DB393"/>
+  <rect x="13" y="2" width="9" height="30" rx="2" fill="#8DCCB5"/>
+  <rect x="25" y="12" width="9" height="20" rx="2" fill="#5DB393"/>
+  <path d="M1 36 L17 43 L33 36" stroke="#E0AD59" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
-> Última actualización: 2026-06-09
-> Fase actual: Fase 5 — Oportunidad y finanzas
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 6
+> Última actualización: 2026-06-10
+> Fase actual: Fase 7 — Aplicación (UI + API)
+> Estado: ✅ COMPLETADA — lista para iniciar Fase 8
 
 ---
 
@@ -46,13 +46,93 @@ en una sola máquina local (WSL2).
 | 3    | Modelos de valor         | ✅ Completada (2026-06-09) |
 | 4    | Segmentación y comps     | ✅ Completada (2026-06-09) |
 | 5    | Oportunidad y finanzas   | ✅ Completada (2026-06-09) |
-| 6    | Score y optimización     | Pendiente    |
-| 7    | Aplicación (UI + API)    | Pendiente    |
+| 6    | Score y optimización     | ✅ Completada (2026-06-10) |
+| 7    | Aplicación (UI + API)    | ✅ Completada (2026-06-10) |
 | 8    | Validación y cierre      | Pendiente    |
 
 ---
 
-## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-09)
+## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-10)
+
+### Resumen de cierre Fase 7 (2026-06-10)
+**Sub-fase 7A — API REST NestJS** (todo bajo prefijo `/api`, Swagger en
+`/api/docs`, 13 rutas mapeadas):
+- `GET /api/inmuebles` — lista paginada con filtros (`precio_min/max`, `tipo`,
+  `zona_id`, `score_min`, `nivel_riesgo`, `page`, `limit`), orden `score DESC
+  NULLS LAST`; devuelve lat/lng (`ST_X/ST_Y`) + análisis. **Pública.**
+- `GET /api/inmuebles/:id` — ficha completa: análisis, `shap_json`, zona y 5
+  comparables. **Pública.**
+- `GET /api/inmuebles/:id/reporte` — PDF con `@react-pdf/renderer` (sin
+  puppeteer; React.createElement para no tocar la config JSX). **Protegida.**
+- `POST/GET/DELETE /api/watchlist`, `GET /api/alertas`, `PUT /api/alertas/:id/vista`,
+  `POST /api/optimizar` (proxy a `analytics:8000/analytics/optimizar`, NSGA-II).
+  **Protegidas.**
+- **Auth:** JWT (`@nestjs/jwt` + `passport-jwt`), usuario único `admin` validado
+  contra `ADMIN_PASSWORD` (env); `POST /api/auth/login`. El payload usa
+  `sub=1` (usuario admin sembrado por migración 009) para las FK de
+  watchlist/alerta. `health` queda fuera del prefijo `/api` para los healthchecks.
+- **Acceso a datos:** `DatabaseModule` global con `pg.Pool` y SQL crudo
+  (el backend solo LEE; escribe únicamente watchlist/alerta). Validación con
+  `class-validator` + `ValidationPipe` (transform/whitelist).
+- Migración **009**: siembra `usuario` admin (id=1). Se sembraron 5 alertas de
+  demostración para las top oportunidades (`prob_oportunidad > 0.7`).
+
+**Sub-fase 7B — Dashboard Next.js 16 (App Router, Tailwind v4, TS estricto):**
+- **Branding:** tokens del Brand Guide en `globals.css` (`@theme`, fuente de
+  verdad de Tailwind v4) y espejados en `tailwind.config.js`. Colores
+  brand/amber/terra/data/neutral, escala tipográfica, sombras (card/panel/
+  modal/pin), espaciado (sidebar 248px, header 60px, panel-p 24px). Fuentes
+  Plus Jakarta Sans + JetBrains Mono vía `next/font/google`. Logo en
+  `public/logo.svg` (isotipo de 3 barras sobre raíz ámbar).
+- **`/`** — sidebar de filtros (brand-800) + mapa MapLibre (markers coloreados
+  por score, popups con "Ver detalle") + tabla top-20 (sort por score/precio/
+  yield) + modal "Optimizar con NSGA-II". Filtros multi (tipo/zona) refinados
+  en cliente sobre un fetch amplio; bookmarkeables vía `useSearchParams`.
+- **`/inmueble/[id]`** — ficha: precio display, score badge, señal Comprar/
+  Mantener/Vigilar/Evitar, mini-mapa, 4 tarjetas financieras, riesgo
+  territorial, **gráfico SHAP (Recharts, barras horizontales)**, comparables, y
+  botón flotante "Descargar reporte PDF".
+- **`/watchlist`** — alertas no vistas (marcar vista) + búsquedas guardadas
+  (aplicar al mapa / eliminar) + modal de nueva búsqueda.
+- **Cliente API** `src/lib/api.ts`: auto-login admin (no hay pantalla de login),
+  token en localStorage, re-auth en 401. Mapas con `next/dynamic` (`ssr:false`).
+- Verificación: las 3 páginas responden 200, `tsc --noEmit` limpio, API probada
+  end-to-end (login, CRUD watchlist, alertas, PDF 5.4 KB, proxy NSGA-II).
+- Detalle completo en `docs/fases/fase_07_completada.md`
+- Próxima fase: Fase 8 — Validación y cierre
+
+### Resumen de cierre Fase 6 (2026-06-10)
+- **Score integrado (0-100)** en `analisis_inmueble.score` para los inmuebles
+  con datos completos (segmentos 0 y 1; atípicos con `score = NULL`). Fórmula =
+  `100 * minmax(0.30·prob_oportunidad + 0.25·(-brecha_norm) + 0.25·yield_norm +
+  0.10·(1-riesgo_norm) + 0.10·posicion_comp)`, **pesos configurables** vía
+  `SCORE_W_*`. Distribución verificada: max=100, min=0, avg≈57.
+- **SHAP** persistido en `analisis_inmueble.shap_json` para el mismo set (lista
+  `{feature, value, impact}` ordenada por `abs(impact)` desc, 7 features del
+  modelo de valor); limpia `shap_json` de inmuebles que dejan de tener datos
+  completos. Explicador robusto: `TreeExplainer` para modelos de árbol,
+  agnóstico como respaldo. Explican `log1p(precio)`.
+- **Optimización NSGA-II (pymoo)** en `POST /analytics/optimizar`: frente de
+  Pareto (max yield, min precio, min riesgo) filtrado por presupuesto/zonas/
+  tipos/tolerancia de riesgo. Responde en **< 1 s** (corte 8 s, pop ≤ 50,
+  n_gen=30), garantiza 3–20 inmuebles.
+- Endpoints: `POST /analytics/calcular_score`, `POST /analytics/calcular_shap`,
+  `GET /analytics/score/{id}/explicacion`, `POST /analytics/optimizar`.
+- Migración 008: `CHECK` de rango (0-100) sobre `score`.
+- **Fix infra:** `--reload-exclude *.joblib`/`*.json` en el Dockerfile de
+  analytics (el watcher reiniciaba el servidor al escribir artefactos de modelo
+  y cortaba las peticiones de entrenamiento/scoring por HTTP).
+- Pipeline `analytics/app/pipelines/scoring.py`; tests en
+  `tests/test_scoring.py` (9). **Suite analytics completa: 32 passed.**
+- **Determinismo Fase 3 corregido:** los estimadores y las búsquedas de
+  `modelos_valor.py` usan `n_jobs=1` (XGBoost `tree_method="exact"`); el
+  reentrenamiento es reproducible bit a bit sobre un dataset fijo y el test
+  `test_r2_supera_umbral` pasa.
+- **Nota de datos:** el scraper @Cron se ejecutó durante la sesión y creció el
+  dataset (315→519 inmuebles, `analisis_inmueble` 302→502). Tras re-correr la
+  cadena: ~415 inmuebles con datos completos, modelo XGBoost R²≈0.66–0.73.
+- Detalle completo en `docs/fases/fase_06_completada.md`
+- Próxima fase: Fase 7 — Aplicación (UI + API)
 
 ### Resumen de cierre Fase 5 (2026-06-09)
 - **Clasificador de oportunidad: StandardScaler → LogisticRegression
@@ -161,8 +241,9 @@ en una sola máquina local (WSL2).
 - analisis_inmueble: 302 registros con variables espaciales (Fase 2) +
   `valor_estimado` y `brecha` (Fase 3) + `segmento` y `posicion_vs_mediana`
   (Fase 4) + `prob_oportunidad`, `canon_estimado_mensual`, `yield_bruto`,
-  `cap_rate` (Fase 5; estos 3 últimos NULL para los 4 inmuebles de los
-  segmentos 2-3); `score`/`shap_json` (Fase 6) vacíos
+  `cap_rate` (Fase 5; NULL para los inmuebles atípicos sin segmento 0/1) +
+  `score` y `shap_json` (Fase 6; poblados para los 299 con datos completos,
+  NULL para los atípicos)
 - comparable: 1510 registros (5 comparables por inmueble) con `distancia_pca`,
   `dif_precio_m2`, `posicion_vs_mediana` (Fase 4)
 
@@ -177,9 +258,20 @@ en una sola máquina local (WSL2).
   `prob_oportunidad` con `POST /analytics/clasificar`. Indicadores
   financieros (`canon_estimado_mensual`, `yield_bruto`, `cap_rate`) con
   `POST /analytics/financiero`.
+- **Score integrado + SHAP (Fase 6):** `score` (0-100, pesos `SCORE_W_*`) y
+  `shap_json` se recalculan con `POST /analytics/calcular_score` y
+  `POST /analytics/calcular_shap`; resumen en `analytics_models/score.json`.
+  El SHAP reutiliza el modelo de valor (`best_model.joblib`). Frente de Pareto
+  bajo demanda con `POST /analytics/optimizar` (NSGA-II, pymoo).
 
 ### Problemas conocidos
-- shadcn/ui no está configurado todavía (diferido a Fase 7B).
+- shadcn/ui: se optó por **primitivos UI propios** (`src/components/ui.tsx`,
+  `Dialog.tsx`) equivalentes a Button/Card/Badge/Select/Slider/Dialog/Table/
+  Input/Checkbox con los tokens de marca, en lugar del CLI de shadcn (frágil
+  con Tailwind v4 + init interactivo en contenedor). Mismo resultado visual.
+- Frontend: la autenticación es auto-login admin (sin pantalla de login) usando
+  `NEXT_PUBLIC_ADMIN_USER/PASSWORD`. Aceptable para el MVP de un solo usuario;
+  mover a un login real si se habilita multi-tenencia.
 - `proyecto_pot`/`capa_riesgo` cubren principalmente Floridablanca; falta
   cobertura de Bucaramanga, Girón y Piedecuesta (ver deuda técnica de
   `docs/fases/fase_01_completada.md`). Impacto en Fase 2: solo 2 inmuebles

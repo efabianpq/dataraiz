@@ -1317,3 +1317,30 @@ volumes:
 
 *Documento generado para el proyecto DataRaíz — Universidad INCCA de Colombia*  
 *Electiva de Profundización I — 2025*
+
+Modelo y esfuerzo por fase
+## Modelo y esfuerzo recomendado por fase
+
+| Fase | Nombre | Modelo | Esfuerzo | Por qué |
+|------|--------|--------|----------|---------|
+| 0 | Entorno y esqueletos | Sonnet 4.6 | high | Código repetitivo y estructurado, no requiere razonamiento profundo |
+| 1A | Scraper Fincaraíz | Sonnet 4.6 | high | Playwright es bien conocido, pero necesita atención al detalle |
+| 1B | Datos POT/Riesgo | Opus 4 | high | Requiere razonar sobre formatos geoespaciales variables y fuentes oficiales colombianas |
+| 2 | Geoprocesamiento PostGIS | Opus 4 | high | Consultas espaciales complejas, transformaciones SRID, análisis territorial |
+| 3 | Modelos de valor ML | Opus 4 | high | Pipeline ML completo, múltiples modelos, optimización de hiperparámetros |
+| 4 | Segmentación y comps | Opus 4 | high | PCA + K-means + comparables requiere razonamiento estadístico profundo |
+| 5 | Oportunidad y finanzas | Sonnet 4.6 | high | Regresión logística y cálculos financieros más directos |
+| 6 | Score + SHAP + NSGA-II | Opus 4 | high | La fase más compleja: explicabilidad + optimización multicriterio |
+| 7A | API NestJS | Sonnet 4.6 | medium | Endpoints REST estándar, código predecible |
+| 7B | Dashboard Next.js | Sonnet 4.6 | medium | UI con componentes shadcn/ui, relativamente directo |
+| 8 | Validación y cierre | Sonnet 4.6 | medium | Tests y documentación, no requiere razonamiento complejo |
+
+### Regla general
+
+| Situación | Modelo | Esfuerzo |
+|-----------|--------|----------|
+| Arquitectura o algoritmos complejos | Opus 4 | high |
+| Código estructurado conocido | Sonnet 4.6 | high |
+| Documentación, tests, ajustes menores | Sonnet 4.6 | medium |
+| Preguntas rápidas o dudas puntuales | Sonnet 4.6 | low |
+| Bug muy difícil de diagnosticar | Opus 4 | high |
