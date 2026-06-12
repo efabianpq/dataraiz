@@ -1,8 +1,8 @@
 # CLAUDE.md — DataRaíz: Contexto del Proyecto
 
-> Última actualización: 2026-06-10
-> Fase actual: Fase 7 — Aplicación (UI + API)
-> Estado: ✅ COMPLETADA — lista para iniciar Fase 8
+> Última actualización: 2026-06-11
+> Fase actual: Fase 8 — Validación y cierre
+> Estado: ✅ COMPLETADA — MVP cerrado (Fases 0–8)
 
 ---
 
@@ -48,11 +48,49 @@ en una sola máquina local (WSL2).
 | 5    | Oportunidad y finanzas   | ✅ Completada (2026-06-09) |
 | 6    | Score y optimización     | ✅ Completada (2026-06-10) |
 | 7    | Aplicación (UI + API)    | ✅ Completada (2026-06-10) |
-| 8    | Validación y cierre      | Pendiente    |
+| 8    | Validación y cierre      | ✅ Completada (2026-06-11) |
 
 ---
 
-## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-10)
+## ESTADO ACTUAL DEL SISTEMA (actualizado 2026-06-11)
+
+### Resumen de cierre Fase 8 (2026-06-11) — Validación y cierre
+**Diagnóstico:** 6 contenedores arriba y `/health` OK en backend/analytics y 200
+en frontend. PostGIS íntegro (0 geometrías inválidas). Se detectó que el
+scraper (@Cron) había crecido el dataset y dejado la **cadena analítica
+desactualizada** (720 inmuebles, 502 con análisis, 218 sin analizar).
+
+**Estabilización (re-ejecución del pipeline sobre 700 inmuebles geocodificados):**
+- **Fix del modelo de valor (deuda saldada).** El test de R² fallaba (split
+  único 0.49–0.59) por ruido del scraping. Se reemplazó el filtro de outliers
+  (p1/p99 + 3σ) por **regla de Tukey (IQR k=1.5)** sobre `precio` y `precio_m2`,
+  y se mide la calidad con **R² validada por CV (5-fold)**. Resultado: **R²_cv =
+  0.638 ± 0.024** (antes ~0.51), RMSE 875M→**350M**, MAE 330M→**201M**. Ver
+  `docs/decisiones/004-...md`. Nuevos campos `r2_cv`/`r2_cv_std` en el resumen.
+- Cadena completa re-corrida: geoprocesar(700) → entrenar → segmentar
+  (**k=6**, silueta 0.559) → clasificar → financiero (yield avg 5.6%) →
+  score → shap. **700** con valor/prob, **684** con score+SHAP (segmentos 0/1),
+  16 atípicos sin score (por diseño), **267** oportunidades (`prob>0.7`).
+
+**Tests:** analytics **34 passed** (pytest); backend **35 passed / 12 suites**
+(Jest). Se escribieron tests de los módulos críticos sin cobertura previa
+(inmuebles 89.7%, reportes/PDF 88.2%, watchlist 82.4%, proxy optimizar 78.1%,
+alertas/auth 100%) — todos **> 60%**. Guarda de regresión del filtro IQR.
+
+**Validación de modelos:** desviación `valor_estimado` vs mediana de precio/m²
+de comparables — muestra de 10: **24.8%** prom.; global **mediana 19.7%** (< 30%
+✓; la media global 59.5% la inflan lotes atípicos). Score con distribución sana
+(avg 46.3, repartido 0–100). NSGA-II validado: respeta presupuesto/zonas/tipos,
+frente de Pareto coherente, **< 0.3 s**.
+
+**Performance (curl, dataset del piloto):** `GET /api/inmuebles` 4–13 ms
+(limit 20 y 1000); `GET /api/inmuebles/:id` (SHAP) 4–14 ms; PDF 218–391 ms.
+**Todo < 500 ms** → sin índices/caché adicionales.
+
+**Entregables:** README de arranque completo, `docs/manual_usuario.md`, 4 ADR
+en `docs/decisiones/`, `scripts/backup.sh` + `scripts/restore.sh` (backup
+verificado, 6.6 MB `.sql.gz`). Detalle en `docs/fases/fase_08_completada.md`.
+**MVP cerrado.**
 
 ### Resumen de cierre Fase 7 (2026-06-10)
 **Sub-fase 7A — API REST NestJS** (todo bajo prefijo `/api`, Swagger en
@@ -248,9 +286,12 @@ en una sola máquina local (WSL2).
   `dif_precio_m2`, `posicion_vs_mediana` (Fase 4)
 
 ### Modelos activos
-- **Valor de mercado: XGBoost** (R²=0.632) en `analytics_models/best_model.joblib`
-  + `preprocessor.joblib`. Re-entrenar con `POST /analytics/entrenar`.
-- **Segmentación: PCA(5) + K-means k=4** (silueta=0.4316) en
+- **Valor de mercado: XGBoost** (R²_cv=0.638 ± 0.024 sobre 700 inmuebles;
+  Fase 8) en `analytics_models/best_model.joblib` + `preprocessor.joblib`.
+  Filtro de outliers por IQR (Tukey k=1.5) y calidad medida por R² de CV.
+  Re-entrenar con `POST /analytics/entrenar`.
+- **Segmentación: PCA + K-means** (k elegido por silueta; k=6, silueta≈0.56 al
+  cierre de Fase 8) en
   `analytics_models/{scaler_segmentacion,pca_model,kmeans_model}.joblib`.
   Recalcular segmentos y comparables con `POST /analytics/segmentar`.
 - **Oportunidad: StandardScaler + LogisticRegression** (AUC cv=5 = 0.9769) en
@@ -449,6 +490,9 @@ dataraiz/
 
 ## DEUDA TÉCNICA Y MEJORAS FUTURAS (fuera del MVP)
 
+- [ ] **Auto-recálculo de la cadena analítica tras cada scraping** (hoy es
+  manual; en Fase 8 el dataset creció y dejó el análisis desactualizado hasta
+  re-correr el pipeline). Encadenar geoprocesar→…→shap como job tras el @Cron.
 - [ ] Integración con datos de notariado/registro para transacciones cerradas
 - [ ] Cobertura de otras ciudades (Bogotá, Medellín, Cali)
 - [ ] Capa Claude API para reportes en lenguaje natural

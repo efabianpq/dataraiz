@@ -37,3 +37,7 @@ Thumbs.db
 
 # Instaladores descargados
 *.deb
+
+# Respaldos de base de datos (scripts/backup.sh)
+backups/
+coverage/
